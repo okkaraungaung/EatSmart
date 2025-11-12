@@ -12,18 +12,32 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int dailyGoal = 2000;
   int todayCalories = 1450;
+  int _selectedIndex = 0;
+
   List<Map<String, dynamic>> history = [
     {"date": "2025-11-06", "calories": 1800},
     {"date": "2025-11-05", "calories": 1950},
     {"date": "2025-11-04", "calories": 1700},
   ];
 
+  void _onItemTapped(int index) {
+    setState(() => _selectedIndex = index);
+    if (index == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const HistoryScreen(date: '2025-11-06'),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     double progress = todayCalories / dailyGoal;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Home"), centerTitle: true),
+      appBar: AppBar(title: const Text("EatSmart"), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -75,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     horizontal: 30,
                     vertical: 12,
                   ),
-                  backgroundColor: Colors.green,
+                  backgroundColor: const Color.fromARGB(255, 106, 175, 249),
                 ),
                 onPressed: () {
                   Navigator.push(
@@ -122,6 +136,63 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   );
                 },
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      // Floating button
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.blueAccent,
+        shape: const CircleBorder(),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const FoodSearchScreen()),
+          );
+        },
+        child: const Icon(Icons.add, size: 32),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+
+      // Bottom navigation bar
+      bottomNavigationBar: BottomAppBar(
+        color: const Color(0xFF232334),
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildNavItem(Icons.home, "Home", 0),
+              _buildNavItem(Icons.history, "History", 1),
+              const SizedBox(width: 48), // space for + button
+              _buildNavItem(Icons.bar_chart, "Progress", 2),
+              _buildNavItem(Icons.more_horiz, "More", 3),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final isSelected = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () => _onItemTapped(index),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3.0, horizontal: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: isSelected ? Colors.blueAccent : Colors.grey),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.blueAccent : Colors.grey,
+                fontSize: 12,
               ),
             ),
           ],
