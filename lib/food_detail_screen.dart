@@ -1,67 +1,120 @@
 import 'package:flutter/material.dart';
 
-class FoodDetailScreen extends StatelessWidget {
+class FoodDetailScreen extends StatefulWidget {
   final Map<String, dynamic> food;
+  final Function(Map<String, dynamic>)? onAddIngredient;
 
-  const FoodDetailScreen({super.key, required this.food});
+  const FoodDetailScreen({super.key, required this.food, this.onAddIngredient});
+
+  @override
+  State<FoodDetailScreen> createState() => _FoodDetailScreenState();
+}
+
+class _FoodDetailScreenState extends State<FoodDetailScreen> {
+  double grams = 100;
 
   @override
   Widget build(BuildContext context) {
-    final nutrients = food['foodNutrients'] ?? [];
+    final food = widget.food;
+    final nutrients = food["nutrients"] ?? {};
 
-    String getNutrient(String name) {
-      final nutrient = nutrients.firstWhere(
-        (n) => n['nutrientName'] == name,
-        orElse: () => {'value': 'N/A', 'unitName': ''},
-      );
-      return '${nutrient['value']} ${nutrient['unitName'] ?? ''}';
+    double getValue(String key) {
+      if (nutrients[key] == null) return 0;
+      return nutrients[key].toDouble();
     }
 
+    final kcal100 = getValue("ENERC_KCAL");
+    final protein100 = getValue("PROCNT");
+    final fat100 = getValue("FAT");
+    final carbs100 = getValue("CHOCDF");
+
+    double calc(double per100) => (per100 * grams) / 100;
+
     return Scaffold(
-      appBar: AppBar(title: Text(food['description'] ?? 'Food Details')),
+      appBar: AppBar(title: Text(food["label"] ?? "Food Details")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              food['description'] ?? 'Unknown Food',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              food["label"] ?? "Unknown Food",
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
+
+            const SizedBox(height: 20),
+
             const Text(
-              'Macronutrients (per 100g):',
+              "Select Amount (grams)",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
+
+            Slider(
+              min: 0,
+              max: 500,
+              divisions: 500,
+              value: grams,
+              label: "${grams.toInt()} g",
+              onChanged: (v) => setState(() => grams = v),
+            ),
+
+            Text(
+              "${grams.toInt()} g selected",
+              style: const TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 20),
+
+            const Text(
+              "Nutrition (for selected amount)",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+
             const SizedBox(height: 12),
-            _nutrientRow('Calories', getNutrient('Energy')),
-            _nutrientRow('Protein', getNutrient('Protein')),
-            _nutrientRow('Fat', getNutrient('Total lipid (fat)')),
-            _nutrientRow(
-              'Carbohydrates',
-              getNutrient('Carbohydrate, by difference'),
-            ),
-            _nutrientRow('Fiber', getNutrient('Fiber, total dietary')),
-            _nutrientRow('Sugars', getNutrient('Sugars, total including NLEA')),
-            const SizedBox(height: 24),
-            const Text(
-              'Nutrient Breakdown:',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ListView.builder(
-                itemCount: nutrients.length,
-                itemBuilder: (context, index) {
-                  final n = nutrients[index];
-                  return ListTile(
-                    title: Text(n['nutrientName'] ?? 'Unknown'),
-                    trailing: Text(
-                      '${n['value'] ?? '-'} ${n['unitName'] ?? ''}',
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                  );
+            _row("Calories", "${calc(kcal100).toStringAsFixed(1)} kcal"),
+            _row("Protein", "${calc(protein100).toStringAsFixed(1)} g"),
+            _row("Fat", "${calc(fat100).toStringAsFixed(1)} g"),
+            _row("Carbs", "${calc(carbs100).toStringAsFixed(1)} g"),
+
+            const SizedBox(height: 30),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  // Data to send back
+                  final item = {
+                    "label": food["label"],
+                    "grams": grams,
+                    "calories": calc(kcal100),
+                    "protein": calc(protein100),
+                    "fat": calc(fat100),
+                    "carbs": calc(carbs100),
+                  };
+
+                  if (widget.onAddIngredient != null) {
+                    widget.onAddIngredient!(item);
+
+                    Navigator.pop(context); // back to search
+                    Navigator.pop(context); // back to recipe builder
+                  } else {
+                    // Means user just searched normally
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "Added ${grams.toInt()}g of ${food["label"]} to daily calories!",
+                        ),
+                      ),
+                    );
+
+                    Navigator.pop(context); // Only go back one page
+                  }
                 },
+
+                child: Text(
+                  widget.onAddIngredient != null
+                      ? "Add Ingredient"
+                      : "Add to Daily Calorie",
+                ),
               ),
             ),
           ],
@@ -70,20 +123,14 @@ class FoodDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _nutrientRow(String label, String value) {
+  Widget _row(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
-          ),
+          Text(label, style: const TextStyle(fontSize: 16)),
+          Text(value, style: const TextStyle(fontSize: 16)),
         ],
       ),
     );

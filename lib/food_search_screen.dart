@@ -2,30 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../config.dart';
 import 'food_detail_screen.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: "assets/.env");
-  runApp(const FoodSearchApp());
-}
-
-class FoodSearchApp extends StatelessWidget {
-  const FoodSearchApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Calorie Tracker',
-      theme: ThemeData(primarySwatch: Colors.green),
-      home: const FoodSearchScreen(),
-    );
-  }
-}
 
 class FoodSearchScreen extends StatefulWidget {
-  const FoodSearchScreen({super.key});
+  final Function(Map<String, dynamic>)? onAddIngredient;
+
+  const FoodSearchScreen({super.key, this.onAddIngredient});
 
   @override
   State<FoodSearchScreen> createState() => _FoodSearchScreenState();
@@ -33,40 +16,39 @@ class FoodSearchScreen extends StatefulWidget {
 
 class _FoodSearchScreenState extends State<FoodSearchScreen> {
   final TextEditingController _controller = TextEditingController();
-  final _debounceDuration = const Duration(milliseconds: 500);
-
+  final Duration _debounceDuration = const Duration(milliseconds: 600);
   Timer? _debounce;
   List<dynamic> _foods = [];
   bool _loading = false;
+  String _lastQuery = '';
 
   Future<void> searchFood(String query) async {
-    if (query.isEmpty) {
+    if (query.isEmpty || query == _lastQuery) return;
+
+    if (query.length < 3) {
       setState(() => _foods = []);
       return;
     }
 
-    final apiKey = dotenv.env['USDA_API_KEY'];
-    final url =
-        'https://api.nal.usda.gov/fdc/v1/foods/search?query=$query&api_key=$apiKey';
+    setState(() {
+      _loading = true;
+      _lastQuery = query;
+    });
 
-    setState(() => _loading = true);
+    final url = "${AppConfig.baseUrl}/api/edamam?query=$query";
 
     try {
       final response = await http.get(Uri.parse(url));
-      debugPrint('Request URL: $url');
-      debugPrint('Response: ${response.body}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        final parsed = data["parsed"] ?? [];
+        final hints = data["hints"] ?? [];
         setState(() {
-          _foods = data['foods'] ?? [];
+          _foods = [...parsed, ...hints];
         });
-        debugPrint('Found ${_foods.length} foods');
-      } else {
-        debugPrint('Failed: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error: $e');
+      debugPrint("Error: $e");
     }
 
     setState(() => _loading = false);
@@ -75,13 +57,6 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   @override
   void initState() {
     super.initState();
-
-    if (!dotenv.isInitialized) {
-      dotenv.load(fileName: "assets/.env").then((_) {
-        debugPrint("dotenv reloaded successfully");
-      });
-    }
-
     _controller.addListener(() {
       final query = _controller.text.trim();
       if (_debounce?.isActive ?? false) _debounce!.cancel();
@@ -99,7 +74,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Search Food (USDA API)')),
+      appBar: AppBar(title: const Text('Search Food')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -107,7 +82,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
             TextField(
               controller: _controller,
               decoration: const InputDecoration(
-                hintText: 'Type to search (e.g. chicken, apple...)',
+                hintText: 'Type food name (min. 3 letters)',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.search),
               ),
@@ -115,43 +90,41 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
             const SizedBox(height: 20),
             if (_loading)
               const Center(child: CircularProgressIndicator())
-            else if (_foods.isEmpty)
+            else if (_controller.text.isEmpty)
               const Expanded(
-                child: Center(
-                  child: Text(
-                    'Start typing to search for foods...',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ),
+                child: Center(child: Text("Start typing to search...")),
               )
+            else if (_controller.text.length < 3)
+              const Expanded(
+                child: Center(child: Text("Type at least 3 letters.")),
+              )
+            else if (_foods.isEmpty)
+              const Expanded(child: Center(child: Text("No results found.")))
             else
               Expanded(
                 child: ListView.builder(
                   itemCount: _foods.length,
                   itemBuilder: (context, index) {
-                    final food = _foods[index];
-                    final nutrients = food['foodNutrients'] ?? [];
-                    final calories =
-                        nutrients
-                            .firstWhere(
-                              (n) => n['nutrientName'] == 'Energy',
-                              orElse: () => {'value': 0},
-                            )['value']
-                            ?.toString() ??
-                        'N/A';
+                    final item = _foods[index];
+                    final food = item["food"] ?? item;
+
+                    final label = food["label"] ?? "Unknown Food";
+                    final nutrients = food["nutrients"] ?? {};
+
+                    final kcal = nutrients["ENERC_KCAL"]?.toString() ?? "N/A";
 
                     return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 6),
                       child: ListTile(
-                        title: Text(food['description'] ?? 'Unknown Food'),
-                        subtitle: Text('Calories: $calories kcal'),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        title: Text(label),
+                        subtitle: Text("Calories: $kcal per 100g"),
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  FoodDetailScreen(food: food),
+                              builder: (_) => FoodDetailScreen(
+                                food: food,
+                                onAddIngredient: widget.onAddIngredient,
+                              ),
                             ),
                           );
                         },
