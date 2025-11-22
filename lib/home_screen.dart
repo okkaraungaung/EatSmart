@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'food_search_screen.dart';
 import 'history_screen.dart';
 import 'recipe_builder_screen.dart';
+import 'more_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _buildHomeContent(),
       const HistoryScreen(date: '2025-11-06'),
       const RecipeBuilderScreen(),
-      _buildMoreScreen(),
+      const MoreScreen(),
     ];
   }
 
@@ -40,43 +42,95 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("EatSmart"), centerTitle: true),
+      //        HEADER
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          "EatSmart",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+
+        actions: [
+          const SizedBox(width: 4),
+          // Profile icon
+          IconButton(
+            icon: const Icon(
+              Icons.person_outline,
+              color: Colors.black87,
+              size: 28,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
+          ),
+
+          const SizedBox(width: 8),
+        ],
+      ),
+
       body: IndexedStack(index: _selectedIndex, children: _screens),
 
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF232334),
-        shape: const CircleBorder(),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const FoodSearchScreen()),
-          );
-        },
-        child: const Icon(Icons.search, size: 29, color: Color(0xFF2E5BFF)),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      //FOOTER
+      bottomNavigationBar: Container(
+        height: 80,
+        color: Colors.transparent,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _footerIcon(Icons.home_outlined, 0),
+            _footerIcon(Icons.history, 1),
 
-      bottomNavigationBar: BottomAppBar(
-        color: const Color(0xFF232334),
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildNavItem(Icons.home, "Home", 0),
-              _buildNavItem(Icons.history, "History", 1),
-              const SizedBox(width: 48),
-              _buildNavItem(Icons.menu_book, "Recipe", 2),
-              _buildNavItem(Icons.more_horiz, "More", 3),
-            ],
-          ),
+            //CENTER ADD BUTTON
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FoodSearchScreen()),
+                );
+              },
+              child: Container(
+                width: 46,
+                height: 46,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.black,
+                ),
+                child: const Icon(Icons.add, size: 24, color: Colors.white),
+              ),
+            ),
+
+            _footerIcon(Icons.menu_book, 2),
+            _footerIcon(Icons.more_horiz, 3),
+          ],
         ),
       ),
     );
   }
 
+  // FOOTER ICON
+  Widget _footerIcon(IconData icon, int index) {
+    final bool selected = _selectedIndex == index;
+
+    return GestureDetector(
+      onTap: () => _onItemTapped(index),
+      child: Icon(
+        icon,
+        size: 28,
+        color: selected ? Colors.black : Colors.grey.shade400,
+      ),
+    );
+  }
+
+  //        HOME PAGE
   Widget _buildHomeContent() {
     double calProgress = todayCalories / dailyGoal;
     double proteinProgress = protein / proteingoal;
@@ -132,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // 🔥 7-day history (you can replace with real data)
+    //        HISTORY DATA
     List<Map<String, dynamic>> history = [
       {"date": "2025-11-06", "calories": 1800},
       {"date": "2025-11-05", "calories": 1950},
@@ -143,33 +197,32 @@ class _HomeScreenState extends State<HomeScreen> {
       {"date": "2025-10-31", "calories": 2000},
     ];
 
-    // Used for scaling bar height
     double maxCal = history
         .map<double>((e) => e["calories"].toDouble())
         .reduce((a, b) => a > b ? a : b);
 
+    //        CONTENT UI
     return Padding(
       padding: const EdgeInsets.all(16),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            //-------------------------------------------------------
-            // 🔵 SUMMARY SECTION
-            //-------------------------------------------------------
+            // Title
             const Text(
               "Today's Summary",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
+            // SUMMARY CARD
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 30),
               decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 249, 250, 250),
+                color: const Color(0xFFF9FAFA),
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 10,
@@ -258,7 +311,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 20),
+
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
@@ -287,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 20),
 
-            //WEEKLY CHART
+            // WEEKLY CHART
             const Text(
               "Calorie History",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -298,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFFc8f0ef), // Light blue background
+                color: const Color(0xFFc8f0ef),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: const [
                   BoxShadow(
@@ -323,11 +378,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(history.length, (index) {
                         double value = history[index]["calories"].toDouble();
-                        double barHeight = (value / maxCal) * 100;
+                        double barHeight = (value / maxCal) * 150;
 
                         return Column(
                           children: [
-                            // Vertical thin bar
                             Container(
                               width: 14,
                               height: 150,
@@ -345,7 +399,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: 14,
                                 height: barHeight,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFFFFF),
+                                  color: Colors.white,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                               ),
@@ -364,42 +418,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMoreScreen() {
-    return const Center(
-      child: Text(
-        "More Settings Coming Soon",
-        style: TextStyle(fontSize: 18, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, int index) {
-    final isSelected = _selectedIndex == index;
-
-    return GestureDetector(
-      onTap: () => _onItemTapped(index),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3.0, horizontal: 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? const Color(0xFF2E5BFF) : Colors.grey,
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? const Color(0xFF2E5BFF) : Colors.grey,
-                fontSize: 12,
               ),
             ),
           ],
