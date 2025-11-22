@@ -18,14 +18,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void initState() {
     super.initState();
 
-    selectedDate = DateFormat("yyyy-MM-dd").parse(widget.date);
+    // Always start with today's date
+    selectedDate = DateTime.now();
     weekDays = _generateWeek(selectedDate);
   }
 
+  // ✅ Week starts on SUNDAY
   List<DateTime> _generateWeek(DateTime baseDate) {
-    final int weekday = baseDate.weekday; // 1 = Monday
-    final DateTime monday = baseDate.subtract(Duration(days: weekday - 1));
-    return List.generate(7, (i) => monday.add(Duration(days: i)));
+    // weekday: Monday=1 ... Sunday=7
+    int weekday = baseDate.weekday;
+
+    // If Sunday (7), daysFromSunday = 0
+    int daysFromSunday = weekday % 7;
+
+    DateTime sunday = baseDate.subtract(Duration(days: daysFromSunday));
+
+    return List.generate(7, (i) => sunday.add(Duration(days: i)));
   }
 
   Future<void> _openDatePicker() async {
@@ -53,10 +61,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("History"),
-        backgroundColor: Colors.white, //95d4e4
+        title: const Text("Your Calories History!!!"),
+        backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
       ),
@@ -65,14 +73,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // -----------------------------------------------------------
-            // 📦 WHITE BOX FOR CALENDAR SECTION
-            // -----------------------------------------------------------
+            // TOP CALENDAR BOX
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               decoration: BoxDecoration(
-                color: Color(0xFF95d4e4),
+                color: const Color(0xFFc8f0ef),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
@@ -84,7 +90,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               ),
               child: Column(
                 children: [
-                  // Calendar icon
+                  // Calendar Picker Button
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -92,7 +98,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         onTap: _openDatePicker,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
+                            color: Colors.white,
                             shape: BoxShape.circle,
                           ),
                           padding: const EdgeInsets.all(10),
@@ -104,7 +110,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                   const SizedBox(height: 15),
 
-                  // Week calendar display
+                  // WEEK VIEW
                   SizedBox(
                     height: 90,
                     child: Row(
@@ -129,7 +135,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 decoration: BoxDecoration(
                                   color: isSelected
                                       ? Colors.blue.shade100
-                                      : Colors.grey.shade200,
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Column(
@@ -179,7 +185,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
             const SizedBox(height: 20),
 
-            // Foods list title
+            // Date Title
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -193,20 +199,40 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
             const SizedBox(height: 12),
 
-            // Foods List
+            // FOODS LIST WITH COLORED BOXES
             Expanded(
               child: ListView.builder(
                 itemCount: foods.length,
                 itemBuilder: (context, index) {
                   final food = foods[index];
-                  return Card(
-                    shape: RoundedRectangleBorder(
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFc8f0ef),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     margin: const EdgeInsets.symmetric(vertical: 6),
-                    child: ListTile(
-                      title: Text(food['name'].toString()),
-                      trailing: Text("${food['calories']} kcal"),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          food["name"].toString(),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          "${food['calories']} kcal",
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
