@@ -23,7 +23,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     weekDays = _generateWeek(selectedDate);
   }
 
-  // ✅ Week starts on SUNDAY
+  //Week starts on SUNDAY
   List<DateTime> _generateWeek(DateTime baseDate) {
     // weekday: Monday=1 ... Sunday=7
     int weekday = baseDate.weekday;
@@ -92,8 +92,18 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 children: [
                   // Calendar Picker Button
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // Today's date on LEFT
+                      Text(
+                        DateFormat("MMMM dd, yyyy").format(DateTime.now()),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          color: Colors.black87,
+                        ),
+                      ),
+
+                      // Calendar button on RIGHT
                       GestureDetector(
                         onTap: _openDatePicker,
                         child: Container(
