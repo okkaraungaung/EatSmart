@@ -61,6 +61,8 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       final query = _controller.text.trim();
       if (_debounce?.isActive ?? false) _debounce!.cancel();
       _debounce = Timer(_debounceDuration, () => searchFood(query));
+
+      setState(() {}); // refresh UI for clear button
     });
   }
 
@@ -74,20 +76,56 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Search Food')),
+      appBar: AppBar(title: const Text('Select your Food')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            //SEARCH BOX
             TextField(
               controller: _controller,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Type food name (min. 3 letters)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search),
+
+                // Reduced height
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 10, // smaller height
+                  horizontal: 16,
+                ),
+
+                // Clear button
+                suffixIcon: _controller.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _controller.clear();
+                          setState(() {
+                            _foods = [];
+                          });
+                        },
+                      )
+                    : null,
+
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: const BorderSide(color: Colors.grey),
+                ),
+
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: const BorderSide(color: Colors.blue),
+                ),
               ),
             ),
-            const SizedBox(height: 20),
+
+            const SizedBox(height: 30),
+
+            // RESULTS SECTION
             if (_loading)
               const Center(child: CircularProgressIndicator())
             else if (_controller.text.isEmpty)
@@ -110,7 +148,6 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
 
                     final label = food["label"] ?? "Unknown Food";
                     final nutrients = food["nutrients"] ?? {};
-
                     final kcal = nutrients["ENERC_KCAL"]?.toString() ?? "N/A";
 
                     return Card(
