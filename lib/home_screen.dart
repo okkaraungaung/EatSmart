@@ -41,7 +41,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("EatSmart"), centerTitle: true),
-      
       body: IndexedStack(index: _selectedIndex, children: _screens),
 
       floatingActionButton: FloatingActionButton(
@@ -106,9 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 6),
-
           Container(
             width: 160,
             height: 12,
@@ -125,214 +122,252 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-
           const SizedBox(height: 6),
-
           Text(
             amountText,
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 16),
         ],
       );
     }
 
+    // 🔥 7-day history (you can replace with real data)
     List<Map<String, dynamic>> history = [
       {"date": "2025-11-06", "calories": 1800},
       {"date": "2025-11-05", "calories": 1950},
       {"date": "2025-11-04", "calories": 1700},
+      {"date": "2025-11-03", "calories": 1600},
+      {"date": "2025-11-02", "calories": 1500},
+      {"date": "2025-11-01", "calories": 1900},
+      {"date": "2025-10-31", "calories": 2000},
     ];
+
+    // Used for scaling bar height
+    double maxCal = history
+        .map<double>((e) => e["calories"].toDouble())
+        .reduce((a, b) => a > b ? a : b);
 
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Today's Summary",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            //-------------------------------------------------------
+            // 🔵 SUMMARY SECTION
+            //-------------------------------------------------------
+            const Text(
+              "Today's Summary",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
 
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 30),
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 249, 250, 250),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 30),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 249, 250, 250),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 170,
+                            height: 170,
+                            child: CircularProgressIndicator(
+                              value: calProgress,
+                              strokeWidth: 12,
+                              backgroundColor: const Color(0xFFF8EFEB),
+                              color: const Color(0xFFF5B766),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 140,
+                            height: 140,
+                            child: CircularProgressIndicator(
+                              value: proteinProgress,
+                              strokeWidth: 12,
+                              backgroundColor: const Color(0xFFECEFFC),
+                              color: const Color(0xFF7599E6),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 110,
+                            height: 110,
+                            child: CircularProgressIndicator(
+                              value: fatProgress,
+                              strokeWidth: 12,
+                              backgroundColor: const Color(0xFFE7FBE8),
+                              color: const Color(0xFF99D47C),
+                            ),
+                          ),
+                          Column(
+                            children: [
+                              Text(
+                                "$todayCalories / $dailyGoal",
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Text("kcal"),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 25),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _nutrientBar(
+                            icon: Icons.local_fire_department,
+                            label: "Calories",
+                            value: calProgress,
+                            color: const Color(0xFFF5B766),
+                            amountText: "$todayCalories kcal",
+                          ),
+                          _nutrientBar(
+                            icon: Icons.fitness_center,
+                            label: "Protein",
+                            value: proteinProgress,
+                            color: const Color(0xFF7599E6),
+                            amountText: "$protein g",
+                          ),
+                          _nutrientBar(
+                            icon: Icons.water_drop,
+                            label: "Fat",
+                            value: fatProgress,
+                            color: const Color(0xFF99D47C),
+                            amountText: "$fat g",
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 30,
+                        vertical: 12,
+                      ),
+                      backgroundColor: const Color(0xFFDDF6FC),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FoodSearchScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.restaurant),
+                    label: const Text("Log Food"),
+                  ),
+                ],
+              ),
             ),
 
-            // CONTENT INSIDE WHITE BOX
-            child: Column(
-              children: [
-                // ROW: CYCLE + BARS
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // 3-LAYER CYCLE (UNCHANGED)
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Calories
-                        SizedBox(
-                          width: 170,
-                          height: 170,
-                          child: CircularProgressIndicator(
-                            value: calProgress,
-                            strokeWidth: 12,
-                            backgroundColor: const Color.fromARGB(
-                              255,
-                              248,
-                              239,
-                              235,
-                            ),
-                            color: const Color(0xFFF5B766),
-                          ),
-                        ),
+            const SizedBox(height: 20),
 
-                        // Protein
-                        SizedBox(
-                          width: 140,
-                          height: 140,
-                          child: CircularProgressIndicator(
-                            value: proteinProgress,
-                            strokeWidth: 12,
-                            backgroundColor: const Color.fromARGB(
-                              255,
-                              236,
-                              239,
-                              252,
-                            ),
-                            color: const Color(0xFF7599E6),
-                          ),
-                        ),
+            //WEEKLY CHART
+            const Text(
+              "Calorie History",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
 
-                        // Fat
-                        SizedBox(
-                          width: 110,
-                          height: 110,
-                          child: CircularProgressIndicator(
-                            value: fatProgress,
-                            strokeWidth: 12,
-                            backgroundColor: const Color.fromARGB(
-                              255,
-                              231,
-                              251,
-                              232,
-                            ),
-                            color: const Color(0xFF99D47C),
-                          ),
-                        ),
-                        Column(
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFc8f0ef), // Light blue background
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Last 7 Days",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 14),
+
+                  SizedBox(
+                    height: 200,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(history.length, (index) {
+                        double value = history[index]["calories"].toDouble();
+                        double barHeight = (value / maxCal) * 100;
+
+                        return Column(
                           children: [
-                            Text(
-                              "$todayCalories / $dailyGoal",
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                            // Vertical thin bar
+                            Container(
+                              width: 14,
+                              height: 150,
+                              alignment: Alignment.bottomCenter,
+                              decoration: BoxDecoration(
+                                color: const Color.fromARGB(
+                                  255,
+                                  171,
+                                  212,
+                                  220,
+                                ).withOpacity(0.4),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Container(
+                                width: 14,
+                                height: barHeight,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFFFFF),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
                               ),
                             ),
-                            const Text("kcal"),
+                            const SizedBox(height: 8),
+                            Text(
+                              history[index]["date"].substring(5),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(width: 25),
-                    // Bars WITH icons (line-by-line)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _nutrientBar(
-                          icon: Icons.local_fire_department,
-                          label: "Calories",
-                          value: calProgress,
-                          color: const Color(0xFFF5B766),
-                          amountText: "$todayCalories kcal",
-                        ),
-
-                        _nutrientBar(
-                          icon: Icons.fitness_center,
-                          label: "Protein",
-                          value: proteinProgress,
-                          color: const Color(0xFF7599E6),
-                          amountText: "$protein g",
-                        ),
-
-                        _nutrientBar(
-                          icon: Icons.water_drop,
-                          label: "Fat",
-                          value: fatProgress,
-                          color: const Color(0xFF99D47C),
-                          amountText: "$fat g",
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 30,
-                      vertical: 12,
-                    ),
-                    backgroundColor: const Color(0xFFDDF6FC),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                        );
+                      }),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FoodSearchScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.restaurant),
-                  label: const Text("Log Food"),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-
-          const SizedBox(height: 20),
-
-          const Text(
-            "Calorie History",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-
-          Expanded(
-            child: ListView.builder(
-              itemCount: history.length,
-              itemBuilder: (context, index) {
-                final day = history[index];
-                return Card(
-                  child: ListTile(
-                    title: Text(day['date']),
-                    trailing: Text(
-                      "${day['calories']} kcal",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
