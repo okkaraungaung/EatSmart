@@ -25,7 +25,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   Future<void> searchFood(String query) async {
     if (query.isEmpty || query == _lastQuery) return;
 
-    if (query.length < 3) {
+    if (query.length < 2) {
       setState(() => _foods = []);
       return;
     }
@@ -35,17 +35,13 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       _lastQuery = query;
     });
 
-    final url = "${AppConfig.baseUrl}/api/edamam?query=$query";
+    final url = "${AppConfig.baseUrl}/api/foods/search?query=$query";
 
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final parsed = data["parsed"] ?? [];
-        final hints = data["hints"] ?? [];
-        setState(() {
-          _foods = [...parsed, ...hints];
-        });
+        setState(() => _foods = data["foods"] ?? []);
       }
     } catch (e) {
       debugPrint("Error: $e");
@@ -61,7 +57,6 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       final query = _controller.text.trim();
       if (_debounce?.isActive ?? false) _debounce!.cancel();
       _debounce = Timer(_debounceDuration, () => searchFood(query));
-
       setState(() {});
     });
   }
@@ -77,7 +72,6 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF6FBFB),
-
       appBar: AppBar(
         title: const Text(
           "Search Food",
@@ -91,149 +85,148 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            //SEARCH BOX
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12.withOpacity(0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: _controller,
-                decoration: InputDecoration(
-                  hintText: "Search for food...",
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-
-                  suffixIcon: _controller.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.close, color: Colors.grey),
-                          onPressed: () {
-                            _controller.clear();
-                            setState(() => _foods = []);
-                          },
-                        )
-                      : null,
-
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 18,
-                  ),
-                ),
-              ),
-            ),
-
+            _buildSearchBox(),
             const SizedBox(height: 20),
-
-            //RESULTS UI
-            if (_loading)
-              const Expanded(child: Center(child: CircularProgressIndicator()))
-            else if (_controller.text.isEmpty)
-              Expanded(
-                child: _emptyMessage(
-                  icon: Icons.fastfood,
-                  text: "Start typing to search food.",
-                ),
-              )
-            else if (_controller.text.length < 3)
-              Expanded(
-                child: _emptyMessage(
-                  icon: Icons.error_outline,
-                  text: "Type at least 3 letters.",
-                ),
-              )
-            else if (_foods.isEmpty)
-              Expanded(
-                child: _emptyMessage(
-                  icon: Icons.search_off,
-                  text: "No results found.",
-                ),
-              )
-            else
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _foods.length,
-                  itemBuilder: (context, index) {
-                    final item = _foods[index];
-                    final food = item["food"] ?? item;
-
-                    final label = food["label"] ?? "Unknown Food";
-                    final nutrients = food["nutrients"] ?? {};
-                    final kcal = nutrients["ENERC_KCAL"]?.toString() ?? "N/A";
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12.withOpacity(0.07),
-                            blurRadius: 8,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: ListTile(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-
-                        title: Text(
-                          label,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-
-                        subtitle: Text(
-                          "Calories: $kcal / 100g",
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color.fromARGB(255, 129, 129, 129),
-                          ),
-                        ),
-
-                        trailing: const Icon(
-                          Icons.chevron_right,
-                          color: Colors.black54,
-                        ),
-
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => FoodDetailScreen(
-                                food: food,
-                                onAddIngredient: widget.onAddIngredient,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
+            _buildResults(),
           ],
         ),
       ),
     );
   }
 
-  // BEAUTIFUL EMPTY STATES
+  // ---------------- SEARCH BOX ----------------
+  Widget _buildSearchBox() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _controller,
+        decoration: InputDecoration(
+          hintText: "Search for food...",
+          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          suffixIcon: _controller.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close, color: Colors.grey),
+                  onPressed: () {
+                    _controller.clear();
+                    setState(() => _foods = []);
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 14,
+            horizontal: 18,
+          ),
+        ),
+      ),
+    );
+  }
 
+  // ---------------- RESULTS ----------------
+  Widget _buildResults() {
+    if (_loading) {
+      return const Expanded(child: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_controller.text.isEmpty) {
+      return Expanded(
+        child: _emptyMessage(
+          icon: Icons.fastfood,
+          text: "Start typing to search food.",
+        ),
+      );
+    }
+
+    if (_controller.text.length < 2) {
+      return Expanded(
+        child: _emptyMessage(
+          icon: Icons.error_outline,
+          text: "Type at least 2 letters.",
+        ),
+      );
+    }
+
+    if (_foods.isEmpty) {
+      return Expanded(
+        child: _emptyMessage(icon: Icons.search_off, text: "No results found."),
+      );
+    }
+
+    return Expanded(
+      child: ListView.builder(
+        itemCount: _foods.length,
+        itemBuilder: (context, index) {
+          final item = _foods[index];
+
+          final fullFood = _prepareFoodForDetail(item);
+          final label = fullFood["label"];
+          final kcal = fullFood["nutrients"]["ENERC_KCAL"] ?? "N/A";
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12.withOpacity(0.07),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 10,
+              ),
+              title: Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+              subtitle: Text(
+                "Calories: $kcal / 100g",
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color.fromARGB(255, 129, 129, 129),
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: Colors.black54),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FoodDetailScreen(
+                      food: fullFood,
+                      onAddIngredient: widget.onAddIngredient,
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ---------------- EMPTY STATE ----------------
   Widget _emptyMessage({required IconData icon, required String text}) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -250,5 +243,31 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
         ),
       ],
     );
+  }
+
+  // ---------------- FORMAT FOOD FOR DETAIL SCREEN ----------------
+  Map<String, dynamic> _prepareFoodForDetail(Map<String, dynamic> item) {
+    // From DB
+    if (item["source"] == "db") {
+      return {
+        "id": item["id"],
+        "label": item["name"],
+        "source": "db",
+        "nutrients": {
+          "ENERC_KCAL": item["calories"],
+          "PROCNT": item["protein"],
+          "FAT": item["fat"],
+          "CHOCDF": item["carbs"],
+        },
+      };
+    }
+
+    // From Edamam API
+    return {
+      "edamam_id": item["edamam_id"],
+      "label": item["name"],
+      "source": "edamam",
+      "nutrients": item["nutrients"] ?? {},
+    };
   }
 }

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../config.dart';
 import 'food_search_screen.dart';
 import 'history_screen.dart';
 import 'more_screen.dart';
 import 'profile_screen.dart';
 import 'recipe_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,34 +17,125 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final String userId = "user123";
+
+  double todayCalories = 0;
+  double todayProtein = 0;
+  double todayFat = 0;
+  double todayCarbs = 0;
+
   int dailyGoal = 2000;
-  int todayCalories = 1450;
-  int protein = 120;
-  int proteingoal = 200;
-  int fat = 60;
-  int fatgoal = 100;
+  int proteinGoal = 200;
+  int fatGoal = 100;
 
   int _selectedIndex = 0;
+  bool isLoading = true;
 
-  late final List<Widget> _screens;
+  List<Map<String, dynamic>> weeklyHistory = [];
 
   @override
   void initState() {
     super.initState();
-    _screens = [
-      _buildHomeContent(),
-      const HistoryScreen(date: '2025-11-06'),
-      const RecipeScreen(),
-      const MoreScreen(),
-    ];
+    loadData();
+  }
+
+  Future<void> loadData() async {
+    await fetchTodayStats();
+    await fetchWeeklyHistory();
+
+    setState(() {
+      isLoading = false; // <- now UI can show real data
+    });
+  }
+
+  // ---------------- FETCH TODAY SUMMARY ----------------
+
+  Future<void> fetchTodayStats() async {
+    final today = DateFormat("yyyy-MM-dd").format(DateTime.now());
+    final url =
+        "${AppConfig.baseUrl}/api/meal/today?user_id=$userId&date=$today";
+
+    try {
+      final res = await http.get(Uri.parse(url));
+      final data = jsonDecode(res.body);
+
+      setState(() {
+        todayCalories = double.parse(
+          ((data["calories"] ?? 0).toDouble()).toStringAsFixed(1),
+        );
+
+        todayProtein = double.parse(
+          ((data["protein"] ?? 0).toDouble()).toStringAsFixed(1),
+        );
+
+        todayFat = double.parse(
+          ((data["fat"] ?? 0).toDouble()).toStringAsFixed(1),
+        );
+
+        todayCarbs = double.parse(
+          ((data["carbs"] ?? 0).toDouble()).toStringAsFixed(1),
+        );
+      });
+    } catch (e) {
+      debugPrint("Error loading today stats: $e");
+    }
+  }
+
+  // ---------------- FETCH HISTORY ----------------
+
+  Future<void> fetchWeeklyHistory() async {
+    final url = "${AppConfig.baseUrl}/api/meal/history?user_id=$userId";
+
+    try {
+      final res = await http.get(Uri.parse(url));
+      final data = jsonDecode(res.body);
+
+      setState(() {
+        weeklyHistory = List<Map<String, dynamic>>.from(data["history"] ?? []);
+      });
+    } catch (e) {
+      debugPrint("Error loading history: $e");
+    }
+  }
+
+  // ---------- Fill missing days to 0 calorie --------
+  List<Map<String, dynamic>> getLast7DaysHistory() {
+    final now = DateTime.now();
+    final List<Map<String, dynamic>> result = [];
+
+    // Create a map for quick lookup by date (yyyy-MM-dd)
+    final Map<String, double> lookup = {};
+    for (var item in weeklyHistory) {
+      String key = item["date"].toString().split("T")[0];
+      lookup[key] = item["calories"].toDouble();
+    }
+
+    for (int i = 7; i > 0; i--) {
+      final day = now.subtract(Duration(days: i));
+      final key = DateFormat("yyyy-MM-dd").format(day);
+
+      result.add({
+        "date": key,
+        "calories": lookup[key] ?? 0, // if missing → 0 calories
+      });
+    }
+
+    return result;
   }
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
+
+    if (index == 0) {
+      loadData();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return Scaffold(
       //        HEADER
       appBar: AppBar(
@@ -77,7 +172,15 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
 
-      body: IndexedStack(index: _selectedIndex, children: _screens),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          _buildHomeContent(),
+          const HistoryScreen(date: '2025-11-06'),
+          const RecipeScreen(),
+          const MoreScreen(),
+        ],
+      ),
 
       //FOOTER
       bottomNavigationBar: Container(
@@ -92,11 +195,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
             //CENTER ADD BUTTON
             GestureDetector(
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const FoodSearchScreen()),
+                  MaterialPageRoute(builder: (_) => FoodSearchScreen()),
                 );
+                loadData();
               },
               child: Container(
                 width: 46,
@@ -134,8 +238,8 @@ class _HomeScreenState extends State<HomeScreen> {
   //        HOME PAGE
   Widget _buildHomeContent() {
     double calProgress = todayCalories / dailyGoal;
-    double proteinProgress = protein / proteingoal;
-    double fatProgress = fat / fatgoal;
+    double proteinProgress = todayProtein / proteinGoal;
+    double fatProgress = todayFat / fatGoal;
 
     Widget _nutrientBar({
       required IconData icon,
@@ -187,20 +291,21 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    //        HISTORY DATA
-    List<Map<String, dynamic>> history = [
-      {"date": "2025-11-06", "calories": 1800},
-      {"date": "2025-11-05", "calories": 1950},
-      {"date": "2025-11-04", "calories": 1700},
-      {"date": "2025-11-03", "calories": 1600},
-      {"date": "2025-11-02", "calories": 1500},
-      {"date": "2025-11-01", "calories": 1900},
-      {"date": "2025-10-31", "calories": 2000},
-    ];
+    final fixed7 = getLast7DaysHistory();
 
-    double maxCal = history
-        .map<double>((e) => e["calories"].toDouble())
-        .reduce((a, b) => a > b ? a : b);
+    double maxCal = fixed7
+        .map((e) => e["calories"].toDouble())
+        .fold(0, (a, b) => a > b ? a : b);
+    if (maxCal == 0) maxCal = 1; // avoid divide-by-zero
+
+    String formatDate(String iso) {
+      try {
+        final dt = DateTime.parse(iso);
+        return "${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
+      } catch (e) {
+        return "";
+      }
+    }
 
     //        CONTENT UI
     return Padding(
@@ -299,14 +404,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             label: "Protein",
                             value: proteinProgress,
                             color: const Color(0xFF7599E6),
-                            amountText: "$protein g",
+                            amountText: "$todayProtein g",
                           ),
                           _nutrientBar(
                             icon: Icons.water_drop,
                             label: "Fat",
                             value: fatProgress,
                             color: const Color(0xFF99D47C),
-                            amountText: "$fat g",
+                            amountText: "$todayFat g",
                           ),
                         ],
                       ),
@@ -326,13 +431,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.push(
+                    onPressed: () async {
+                      await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => const FoodSearchScreen(),
                         ),
                       );
+                      loadData();
                     },
                     icon: const Icon(Icons.restaurant),
                     label: const Text("Log Food"),
@@ -377,8 +483,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     height: 200,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: List.generate(history.length, (index) {
-                        double value = history[index]["calories"].toDouble();
+                      children: List.generate(fixed7.length, (index) {
+                        double value = fixed7[index]["calories"].toDouble();
                         double barHeight = (value / maxCal) * 150;
 
                         return Column(
@@ -407,7 +513,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              history[index]["date"].substring(5),
+                              formatDate(fixed7[index]["date"]),
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
