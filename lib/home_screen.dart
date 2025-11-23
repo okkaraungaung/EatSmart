@@ -81,8 +81,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
       //FOOTER
       bottomNavigationBar: Container(
-        height: 80,
+        height: 70,
         color: Colors.transparent,
+        padding: const EdgeInsets.only(bottom: 25),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
@@ -104,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   shape: BoxShape.circle,
                   color: Colors.black,
                 ),
-                child: const Icon(Icons.add, size: 24, color: Colors.white),
+                child: const Icon(Icons.add, size: 26, color: Colors.white),
               ),
             ),
 
@@ -124,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () => _onItemTapped(index),
       child: Icon(
         icon,
-        size: 28,
+        size: 31,
         color: selected ? Colors.black : Colors.grey.shade400,
       ),
     );
