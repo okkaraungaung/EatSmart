@@ -62,7 +62,7 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
       if (_debounce?.isActive ?? false) _debounce!.cancel();
       _debounce = Timer(_debounceDuration, () => searchFood(query));
 
-      setState(() {}); // refresh UI for clear button
+      setState(() {});
     });
   }
 
@@ -76,68 +76,85 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Select your Food')),
+      backgroundColor: const Color(0xFFF6FBFB),
+
+      appBar: AppBar(
+        title: const Text(
+          "Search Food",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        elevation: 1,
+        backgroundColor: Colors.white,
+      ),
+
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             //SEARCH BOX
-            TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                hintText: 'Type food name (min. 3 letters)',
-                prefixIcon: const Icon(Icons.search),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12.withOpacity(0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _controller,
+                decoration: InputDecoration(
+                  hintText: "Search for food...",
+                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
 
-                // Reduced height
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 10, // smaller height
-                  horizontal: 16,
-                ),
+                  suffixIcon: _controller.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () {
+                            _controller.clear();
+                            setState(() => _foods = []);
+                          },
+                        )
+                      : null,
 
-                // Clear button
-                suffixIcon: _controller.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () {
-                          _controller.clear();
-                          setState(() {
-                            _foods = [];
-                          });
-                        },
-                      )
-                    : null,
-
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: const BorderSide(color: Colors.grey),
-                ),
-
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: const BorderSide(color: Colors.blue),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 18,
+                  ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
-            // RESULTS SECTION
+            //RESULTS UI
             if (_loading)
-              const Center(child: CircularProgressIndicator())
+              const Expanded(child: Center(child: CircularProgressIndicator()))
             else if (_controller.text.isEmpty)
-              const Expanded(
-                child: Center(child: Text("Start typing to search...")),
+              Expanded(
+                child: _emptyMessage(
+                  icon: Icons.fastfood,
+                  text: "Start typing to search food.",
+                ),
               )
             else if (_controller.text.length < 3)
-              const Expanded(
-                child: Center(child: Text("Type at least 3 letters.")),
+              Expanded(
+                child: _emptyMessage(
+                  icon: Icons.error_outline,
+                  text: "Type at least 3 letters.",
+                ),
               )
             else if (_foods.isEmpty)
-              const Expanded(child: Center(child: Text("No results found.")))
+              Expanded(
+                child: _emptyMessage(
+                  icon: Icons.search_off,
+                  text: "No results found.",
+                ),
+              )
             else
               Expanded(
                 child: ListView.builder(
@@ -150,10 +167,49 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                     final nutrients = food["nutrients"] ?? {};
                     final kcal = nutrients["ENERC_KCAL"]?.toString() ?? "N/A";
 
-                    return Card(
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black12.withOpacity(0.07),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
                       child: ListTile(
-                        title: Text(label),
-                        subtitle: Text("Calories: $kcal per 100g"),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+
+                        title: Text(
+                          label,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+
+                        subtitle: Text(
+                          "Calories: $kcal / 100g",
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color.fromARGB(255, 129, 129, 129),
+                          ),
+                        ),
+
+                        trailing: const Icon(
+                          Icons.chevron_right,
+                          color: Colors.black54,
+                        ),
+
                         onTap: () {
                           Navigator.push(
                             context,
@@ -173,6 +229,26 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // BEAUTIFUL EMPTY STATES
+
+  Widget _emptyMessage({required IconData icon, required String text}) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 80, color: Colors.grey[300]),
+        const SizedBox(height: 14),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
