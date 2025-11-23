@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'food_search_screen.dart';
 import 'history_screen.dart';
-import 'recipe_builder_screen.dart';
 import 'more_screen.dart';
 import 'profile_screen.dart';
+import 'recipe_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _screens = [
       _buildHomeContent(),
       const HistoryScreen(date: '2025-11-06'),
-      const RecipeBuilderScreen(),
+      const RecipeScreen(),
       const MoreScreen(),
     ];
   }

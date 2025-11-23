@@ -75,11 +75,12 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                       itemCount: ingredients.length,
                       itemBuilder: (context, index) {
                         final i = ingredients[index];
+                        final cal = (i["calories"] ?? 0.0) as double;
                         return Card(
                           child: ListTile(
-                            title: Text(i["label"]),
+                            title: Text(i["label"] ?? "Ingredient"),
                             subtitle: Text(
-                              "${i["grams"]} g • ${i["calories"].toStringAsFixed(1)} kcal",
+                              "${i["grams"]} g • ${cal.toStringAsFixed(1)} kcal",
                             ),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete),
@@ -123,7 +124,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                   "totalCarbs": totalCarbs,
                 };
 
-                Navigator.pop(context, recipe);
+                Navigator.pop(context, recipe); //go back & return recipe
               },
               child: const Text("Save Recipe"),
             ),
