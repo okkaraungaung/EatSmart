@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../config.dart';
 
 class HistoryScreen extends StatefulWidget {
   final String date;
@@ -14,30 +17,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
   late DateTime selectedDate;
   late List<DateTime> weekDays;
 
+  bool loading = false;
+  List foods = [];
+  double totalCalories = 0;
+
   @override
   void initState() {
     super.initState();
-
-    // Always start with today's date
     selectedDate = DateTime.now();
     weekDays = _generateWeek(selectedDate);
+    _fetchFoodsForDate();
   }
 
-  //Week starts on SUNDAY
   List<DateTime> _generateWeek(DateTime baseDate) {
-    // weekday: Monday=1 ... Sunday=7
     int weekday = baseDate.weekday;
-
-    // If Sunday (7), daysFromSunday = 0
     int daysFromSunday = weekday % 7;
-
     DateTime sunday = baseDate.subtract(Duration(days: daysFromSunday));
-
     return List.generate(7, (i) => sunday.add(Duration(days: i)));
   }
 
   Future<void> _openDatePicker() async {
-    final DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: selectedDate,
       firstDate: DateTime(2020),
@@ -49,17 +49,39 @@ class _HistoryScreenState extends State<HistoryScreen> {
         selectedDate = picked;
         weekDays = _generateWeek(picked);
       });
+      _fetchFoodsForDate();
     }
+  }
+
+  // 🔥 FETCH MEALS FROM BACKEND
+  Future<void> _fetchFoodsForDate() async {
+    setState(() => loading = true);
+
+    final formatted = DateFormat("yyyy-MM-dd").format(selectedDate);
+
+    final url =
+        "${AppConfig.baseUrl}/api/meal/by-date"
+        "?date=$formatted&user_id=user123";
+
+    try {
+      final res = await http.get(Uri.parse(url));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+
+        setState(() {
+          foods = data["foods"] ?? [];
+          totalCalories = (data["totalCalories"] ?? 0).toDouble();
+        });
+      }
+    } catch (e) {
+      debugPrint("HISTORY API ERROR: $e");
+    }
+
+    setState(() => loading = false);
   }
 
   @override
   Widget build(BuildContext context) {
-    final foods = [
-      {"name": "Banana", "calories": 105},
-      {"name": "Chicken breast", "calories": 165},
-      {"name": "Rice", "calories": 200},
-    ];
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -107,7 +129,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       GestureDetector(
                         onTap: _openDatePicker,
                         child: Container(
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.white,
                             shape: BoxShape.circle,
                           ),
@@ -133,9 +155,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                         return GestureDetector(
                           onTap: () {
-                            setState(() {
-                              selectedDate = day;
-                            });
+                            setState(() => selectedDate = day);
+                            _fetchFoodsForDate();
                           },
                           child: Column(
                             children: [
@@ -211,42 +232,44 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
             // FOODS LIST WITH COLORED BOXES
             Expanded(
-              child: ListView.builder(
-                itemCount: foods.length,
-                itemBuilder: (context, index) {
-                  final food = foods[index];
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFc8f0ef),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          food["name"].toString(),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+              child: loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView.builder(
+                      itemCount: foods.length,
+                      itemBuilder: (context, index) {
+                        final food = foods[index];
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFc8f0ef),
+                            borderRadius: BorderRadius.circular(14),
                           ),
-                        ),
-                        Text(
-                          "${food['calories']} kcal",
-                          style: const TextStyle(
-                            fontSize: 15,
-                            color: Colors.black54,
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
                           ),
-                        ),
-                      ],
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                food["name"].toString(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                "${food['calories']} kcal",
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),
