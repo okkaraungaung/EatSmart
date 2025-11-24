@@ -98,7 +98,6 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       "fat": fat,
       "carbs": carbs,
       "edamam_id": item["edamam_id"],
-      "created_by_user": 0,
     };
 
     final res = await http.post(
