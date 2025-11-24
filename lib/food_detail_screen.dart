@@ -112,7 +112,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                           onChanged: (v) {
                             final g = double.tryParse(v) ?? grams;
                             setState(() {
-                              grams = g.clamp(0, 500);
+                              grams = g.clamp(1, 500);
                             });
                           },
                         ),

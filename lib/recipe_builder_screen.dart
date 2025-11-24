@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'food_search_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../config.dart';
 
 class RecipeBuilderScreen extends StatefulWidget {
   const RecipeBuilderScreen({super.key});
@@ -10,8 +13,10 @@ class RecipeBuilderScreen extends StatefulWidget {
 
 class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
   final TextEditingController _recipeNameController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
 
   List<Map<String, dynamic>> ingredients = [];
+  bool _saving = false;
 
   void addIngredient(Map<String, dynamic> item) {
     setState(() {
@@ -21,9 +26,8 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
 
   // SAFE DOUBLE
   double _d(dynamic v) {
-    if (v == null) return 0;
-    if (v is double) return v;
-    if (v is int) return v.toDouble();
+    if (v == null) return 0.0;
+    if (v is num) return v.toDouble();
     return double.tryParse(v.toString()) ?? 0.0;
   }
 
@@ -34,6 +38,153 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
   double get totalFat => ingredients.fold(0.0, (sum, i) => sum + _d(i["fat"]));
   double get totalCarbs =>
       ingredients.fold(0.0, (sum, i) => sum + _d(i["carbs"]));
+
+  List<Map<String, dynamic>> _buildApiItems() {
+    return ingredients.map((i) {
+      return {
+        "food_id": i["db_id"], // we will set db_id after saving
+        "quantity": _d(i["grams"]),
+      };
+    }).toList();
+  }
+
+  Future<String?> saveFoodToDB(Map<String, dynamic> item) async {
+    final url = "${AppConfig.baseUrl}/api/foods/save";
+
+    final nutrients = item["nutrients"];
+
+    // DB food → no nutrients map
+    final calories = nutrients != null
+        ? nutrients["ENERC_KCAL"]
+        : item["calories"];
+    final protein = nutrients != null ? nutrients["PROCNT"] : item["protein"];
+    final fat = nutrients != null ? nutrients["FAT"] : item["fat"];
+    final carbs = nutrients != null ? nutrients["CHOCDF"] : item["carbs"];
+
+    final body = {
+      "name": item["label"] ?? item["name"],
+      "brand": "",
+      "serving_size": 100,
+      "calories": calories,
+      "protein": protein,
+      "fat": fat,
+      "carbs": carbs,
+      "edamam_id": item["id"],
+      "created_by_user": 0,
+    };
+
+    final res = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode(body),
+    );
+
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body)["id"];
+    }
+    return null;
+  }
+
+  Future<void> _saveRecipe() async {
+    if (_recipeNameController.text.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Please enter recipe name")));
+      return;
+    }
+
+    // Convert all ingredients to database foods
+    for (var i in ingredients) {
+      if (i["db_id"] == null) {
+        // Try save to DB
+        final savedId = await saveFoodToDB(i);
+
+        if (savedId == null) {
+          setState(() => _saving = false);
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Failed to save ingredient. Missing nutrients or edamam_id.",
+              ),
+            ),
+          );
+
+          return; // STOP — avoid null food_id
+        }
+
+        i["db_id"] = savedId; // SUCCESS
+      }
+    }
+
+    final apiItems = _buildApiItems();
+
+    if (apiItems.isEmpty) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("No savable items"),
+          content: const Text(
+            "Some ingredients are not saved in the DB. Only ingredients with a DB id will be stored. Continue saving?",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Continue"),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+    }
+
+    setState(() => _saving = true);
+
+    final body = {
+      "user_id": "user123",
+      "name": _recipeNameController.text,
+      "description": _descriptionController.text,
+      "items": apiItems,
+    };
+
+    final url = "${AppConfig.baseUrl}/api/recipes/create";
+
+    try {
+      final res = await http.post(
+        Uri.parse(url),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(body),
+      );
+
+      if (res.statusCode == 200) {
+        if (mounted) {
+          setState(() => _saving = false);
+          Navigator.pop(context);
+        }
+      } else {
+        final errBody = res.body;
+        throw Exception("Failed to save (${res.statusCode}) $errBody");
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Save failed: $e")));
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _recipeNameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +219,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            //NAME CARD
+            // NAME & DESC
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -109,6 +260,25 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                         borderSide: BorderSide.none,
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _descriptionController,
+                    decoration: InputDecoration(
+                      hintText: "Short description (optional)",
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    minLines: 1,
+                    maxLines: 3,
                   ),
                 ],
               ),
@@ -221,7 +391,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            // Totals CARD
+            // Totals and Save
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -296,76 +466,38 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 25),
-
-            // SAVE BUTTON
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (_recipeNameController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: Colors.white,
-                        elevation: 6,
-                        behavior: SnackBarBehavior.floating,
-                        margin: const EdgeInsets.all(20),
+                  const SizedBox(height: 25),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _saving ? null : _saveRecipe,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6EC6CA),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(18),
                         ),
-                        content: Row(
-                          children: const [
-                            Icon(Icons.info, color: Color(0xFF6EC6CA)),
-                            SizedBox(width: 12),
-                            Text(
-                              "Please enter recipe name",
+                      ),
+                      child: _saving
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              "Save Recipe",
                               style: TextStyle(
-                                color: Colors.black87,
+                                fontSize: 16,
+                                color: Colors.white,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ],
-                        ),
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                    return;
-                  }
-
-                  final recipe = {
-                    "name": _recipeNameController.text,
-                    "ingredients": ingredients,
-                    "totalCalories": totalCalories,
-                    "totalProtein": totalProtein,
-                    "totalFat": totalFat,
-                    "totalCarbs": totalCarbs,
-                  };
-
-                  Navigator.pop(context, recipe);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6EC6CA),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 28,
-                    vertical: 14,
+                    ),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  elevation: 3,
-                ),
-                child: const Text(
-                  "Save Recipe",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                ],
               ),
             ),
           ],

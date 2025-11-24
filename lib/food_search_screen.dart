@@ -7,8 +7,13 @@ import 'food_detail_screen.dart';
 
 class FoodSearchScreen extends StatefulWidget {
   final Function(Map<String, dynamic>)? onAddIngredient;
+  final bool autoPop;
 
-  const FoodSearchScreen({super.key, this.onAddIngredient});
+  const FoodSearchScreen({
+    super.key,
+    this.onAddIngredient,
+    this.autoPop = true,
+  });
 
   @override
   State<FoodSearchScreen> createState() => _FoodSearchScreenState();
@@ -208,8 +213,8 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                 ),
               ),
               trailing: const Icon(Icons.chevron_right, color: Colors.black54),
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                final item = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => FoodDetailScreen(
@@ -218,6 +223,16 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
                     ),
                   ),
                 );
+
+                if (item == null) return;
+
+                if (widget.autoPop) {
+                  // 🌟 Case 1: recipe builder → go back to previous screen
+                  Navigator.pop(context, item);
+                } else {
+                  // 🌟 Case 2: recipe detail screen → stay here and update ingredients
+                  widget.onAddIngredient?.call(item);
+                }
               },
             ),
           );
