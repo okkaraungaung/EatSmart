@@ -1,3 +1,4 @@
+import 'package:eat_smart/user_session.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../config.dart';
@@ -17,7 +18,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final String userId = "user123";
+  final String? userId = UserSession.userId;
 
   double todayCalories = 0;
   double todayProtein = 0;

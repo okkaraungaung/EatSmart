@@ -1,5 +1,6 @@
 import 'package:eat_smart/home_screen.dart';
 import 'package:eat_smart/login_screen.dart';
+import 'package:eat_smart/user_session.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,6 +14,7 @@ class CalorieTrackerApp extends StatelessWidget {
   Future<Widget> _startScreen() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString("user_id");
+    await UserSession.load();
 
     // If logged out → User must login
     if (userId == null) {

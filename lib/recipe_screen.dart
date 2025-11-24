@@ -1,3 +1,4 @@
+import 'package:eat_smart/user_session.dart';
 import 'package:flutter/material.dart';
 import 'recipe_detail_screen.dart';
 import 'recipe_builder_screen.dart';
@@ -13,7 +14,7 @@ class RecipeScreen extends StatefulWidget {
 }
 
 class _RecipeScreenState extends State<RecipeScreen> {
-  final String userId = "user123";
+  final String? userId = UserSession.userId;
   List<Map<String, dynamic>> savedRecipes = [];
   bool _loading = false;
   String? _error;

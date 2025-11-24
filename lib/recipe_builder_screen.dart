@@ -1,3 +1,4 @@
+import 'package:eat_smart/user_session.dart';
 import 'package:flutter/material.dart';
 import 'food_search_screen.dart';
 import 'package:http/http.dart' as http;
@@ -145,7 +146,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
     setState(() => _saving = true);
 
     final body = {
-      "user_id": "user123",
+      "user_id": UserSession.userId,
       "name": _recipeNameController.text,
       "description": _descriptionController.text,
       "items": apiItems,

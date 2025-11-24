@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:eat_smart/user_session.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../config.dart';
@@ -23,7 +24,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     gramController = TextEditingController(text: grams.toInt().toString());
   }
 
-  String userId = "user123"; // TODO: replace with real user session
+  String? userId = UserSession.userId;
 
   @override
   Widget build(BuildContext context) {

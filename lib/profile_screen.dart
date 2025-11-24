@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:eat_smart/config.dart';
+import 'package:eat_smart/user_session.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:http/http.dart' as http;
 
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -38,8 +38,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadUser() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    userId = prefs.getString("user_id");
+    userId = UserSession.userId;
 
     if (userId == null) {
       setState(() => _loading = false);

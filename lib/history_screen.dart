@@ -1,3 +1,4 @@
+import 'package:eat_smart/user_session.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
@@ -61,7 +62,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     final url =
         "${AppConfig.baseUrl}/api/meal/by-date"
-        "?date=$formatted&user_id=user123";
+        "?date=$formatted&user_id=${UserSession.userId}";
 
     try {
       final res = await http.get(Uri.parse(url));
