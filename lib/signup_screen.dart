@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
 
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../config.dart';
+
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -16,7 +20,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
   bool loading = false;
 
-  void createAccount() {
+  void createAccount() async {
     if (name.text.isEmpty ||
         email.text.isEmpty ||
         password.text.isEmpty ||
@@ -32,16 +36,29 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() => loading = true);
 
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() => loading = false);
+    final url = "${AppConfig.baseUrl}/api/auth/signup";
 
+    final res = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "name": name.text,
+        "email": email.text,
+        "password": password.text,
+      }),
+    );
+
+    setState(() => loading = false);
+
+    if (res.statusCode == 200) {
       _showSnack("Account created! Please login.");
-
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
-    });
+    } else {
+      _showSnack(jsonDecode(res.body)["error"] ?? "Signup failed");
+    }
   }
 
   void _showSnack(String text) {

@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'signup_screen.dart';
 
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -15,28 +20,44 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool loading = false;
 
-  void login() {
+  void login() async {
     if (email.text.isEmpty || password.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please enter both email and password"),
-        ),
+        const SnackBar(content: Text("Please enter both email and password")),
       );
       return;
     }
 
     setState(() => loading = true);
 
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() => loading = false);
+    final url = "${AppConfig.baseUrl}/api/auth/login";
 
-      // REAL APP NAVIGATION (cannot go back to login)
+    final res = await http.post(
+      Uri.parse(url),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"email": email.text, "password": password.text}),
+    );
+
+    setState(() => loading = false);
+
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      final user = data["user"];
+      final userId = user["id"];
+
+      // save user_id locally
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString("user_id", userId);
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
         (route) => false,
       );
-    });
+    } else {
+      final msg = jsonDecode(res.body)["error"] ?? "Login failed";
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
   }
 
   @override
@@ -46,10 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
         width: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              Color(0xFFE0F7F9),
-              Color(0xFFF6FBFB),
-            ],
+            colors: [Color(0xFFE0F7F9), Color(0xFFF6FBFB)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -75,8 +93,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // LOGIN CARD
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 22, vertical: 28),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 22,
+                  vertical: 28,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(26),

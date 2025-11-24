@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'about_app.dart';
 import 'support_screen.dart';
 import 'profile_screen.dart';
@@ -113,12 +114,17 @@ class MoreScreen extends StatelessWidget {
             // LOGOUT
             Center(
               child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushReplacement(
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.remove("user_id"); // remove login token
+
+                  Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
                   );
                 },
+
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF8FDDE9),
                   padding: const EdgeInsets.symmetric(
