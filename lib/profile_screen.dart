@@ -1,11 +1,9 @@
 import 'dart:convert';
-
 import 'package:eat_smart/config.dart';
 import 'package:eat_smart/user_session.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'package:http/http.dart' as http;
-
 import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -26,11 +24,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController weight = TextEditingController(text: "65");
   final TextEditingController height = TextEditingController(text: "170");
 
+  final TextEditingController manualGoal = TextEditingController(text: "2000");
+  bool useManualGoal = false;
+
   String gender = "Male";
   String activity = "Moderate";
-
   bool _loading = true;
   String? userId;
+
   @override
   void initState() {
     super.initState();
@@ -54,36 +55,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         name.text = data["name"] ?? "";
         email.text = data["email"] ?? "";
+
+        // Safe birthday handling
         final rawBirthday = data["birthday"];
         if (rawBirthday != null && rawBirthday.toString().trim().isNotEmpty) {
           try {
-            try {
-              final parts = rawBirthday.split('-');
-              final parsed = DateTime(
-                int.parse(parts[0]),
-                int.parse(parts[1]),
-                int.parse(parts[2]),
-              ); // local, no UTC shift
-
-              birthDate.text = DateFormat('yyyy-MM-dd').format(parsed);
-            } catch (e) {
-              birthDate.text = rawBirthday.toString().substring(0, 10);
-            }
-          } catch (e) {
-            // fallback if parsing fails
+            final parts = rawBirthday.split('-');
+            final parsed = DateTime(
+              int.parse(parts[0]),
+              int.parse(parts[1]),
+              int.parse(parts[2]),
+            );
+            birthDate.text = DateFormat('yyyy-MM-dd').format(parsed);
+          } catch (_) {
             birthDate.text = rawBirthday.toString().substring(0, 10);
           }
         }
-        weight.text = (data["weight"]?.toString() ?? "");
-        height.text = (data["height"]?.toString() ?? "");
+
+        weight.text = data["weight"]?.toString() ?? "";
+        height.text = data["height"]?.toString() ?? "";
         gender = data["gender"] ?? "Male";
         activity = data["activity"] ?? "Moderate";
+
         _loading = false;
       });
     }
   }
 
-  // --- AUTO BMI (LOGIC UNCHANGED) ---
+  // ---------- BMI ----------
   double get bmi {
     double w = double.tryParse(weight.text) ?? 0;
     double h = (double.tryParse(height.text) ?? 0) / 100;
@@ -92,30 +91,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   String get bmiStatus {
-    double b = bmi;
+    final b = bmi;
     if (b < 18.5) return "Underweight";
     if (b < 25) return "Normal";
     if (b < 30) return "Overweight";
     return "Obese";
   }
 
-  // --- DAILY CALORIE GOAL (LOGIC UNCHANGED) ---
+  // ---------- Calorie Goal ----------
   int get calorieGoal {
     double w = double.tryParse(weight.text) ?? 0;
     double h = double.tryParse(height.text) ?? 0;
 
-    // --- SAFE AGE CALCULATION ---
-    int age = 25; // fallback
+    int age = 25;
     final bd = birthDate.text.trim();
-
     if (bd.length >= 4) {
       final year = int.tryParse(bd.substring(0, 4));
-      if (year != null) {
-        age = DateTime.now().year - year;
-      }
+      if (year != null) age = DateTime.now().year - year;
     }
 
-    // --- BMR ---
     double bmr;
     if (gender == "Male") {
       bmr = 10 * w + 6.25 * h - 5 * age + 5;
@@ -123,7 +117,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       bmr = 10 * w + 6.25 * h - 5 * age - 161;
     }
 
-    // --- ACTIVITY MULTIPLIER ---
     double multiplier =
         {
           "Sedentary": 1.2,
@@ -136,7 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return (bmr * multiplier).round();
   }
 
-  Color get _accentColor => const Color(0xFF6EC6CA);
+  Color get _accentColor => const Color(0xFF4EC5C1);
 
   bool get isHealthInfoComplete {
     return weight.text.trim().isNotEmpty &&
@@ -146,157 +139,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading)
+    if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final double bmiValue = bmi;
     final String status = bmiStatus;
-    final int calories = calorieGoal;
+    final int autoCalories = calorieGoal;
+
+    // BMI bar constants
+    const double barWidth = 280;
+    double bmiPosition = (bmiValue / 40).clamp(0.0, 1.0);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: const Color(0xFFF4F6FA),
+
       appBar: AppBar(
         title: const Text(
           "Profile",
-          style: TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
         ),
+        centerTitle: true,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
-        elevation: 0.5,
-        centerTitle: true,
+        elevation: 0.8,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // HEADER CARD
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 18,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 70,
-                      height: 70,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            _accentColor.withOpacity(0.9),
-                            _accentColor.withOpacity(0.6),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        size: 40,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name.text,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            email.text,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Colors.black54,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _accentColor.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.cake_rounded,
-                                  size: 16,
-                                  color: _accentColor,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  birthDate.text,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: _accentColor,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
 
-              const SizedBox(height: 22),
-
-              // SECTION TITLE - PERSONAL INFO
-              const Text(
-                "Personal Information",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              _inputBox("Full Name", name),
-              _inputBox("Email", email),
-              _datePickerBox("Birth Date", birthDate),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // -------- PERSONAL INFO --------
+            _sectionTitle("Personal Information"),
+            _infoCard([
+              _smallInput("Full Name", name),
+              _smallInput("Email", email),
+              _smallInput("Birth Date (YYYY-MM-DD)", birthDate),
 
               Row(
                 children: [
-                  Expanded(child: _inputBox("Weight (kg)", weight)),
+                  Expanded(child: _smallInput("Weight (kg)", weight)),
                   const SizedBox(width: 10),
-                  Expanded(child: _inputBox("Height (cm)", height)),
+                  Expanded(child: _smallInput("Height (cm)", height)),
                 ],
               ),
 
               Row(
                 children: [
                   Expanded(
-                    child: _dropdownBox(
+                    child: _dropdownSmall(
                       label: "Gender",
                       value: gender,
                       items: const ["Male", "Female"],
@@ -305,8 +197,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: _dropdownBox(
-                      label: "Activity Level",
+                    child: _dropdownSmall(
+                      label: "Activity",
                       value: activity,
                       items: const ["Sedentary", "Light", "Moderate", "Active"],
                       onChanged: (v) => setState(() => activity = v!),
@@ -314,407 +206,307 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
               ),
+            ]),
 
-              const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-              // SECTION TITLE - HEALTH SUMMARY
-              const Text(
-                "Health Summary",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              // HEALTH CARD (BMI CIRCLE + STATUS + CALORIES BAR)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 18,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 8,
-                      offset: Offset(0, 4),
+            // -------- HEALTH SUMMARY --------
+            _sectionTitle("Health Summary"),
+            _infoCard([
+              if (!isHealthInfoComplete)
+                Column(
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      color: Colors.orange,
+                      size: 40,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Fill in your Weight, Height, and Birth Date\nto see your BMI and calorie summary.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
-                ),
-                child:
-                    (weight.text.trim().isEmpty ||
-                        height.text.trim().isEmpty ||
-                        birthDate.text.trim().length < 4)
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.info_outline,
-                              color: Colors.orange,
-                              size: 40,
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              "Fill in your Weight, Height, and Birth Date\nto see your BMI and calorie summary.",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.black54,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : Column(
-                        children: [
-                          Row(
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // -------- BMI TITLE --------
+                    Text(
+                      "BMI Status: $status",
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: _bmiColor(bmiValue),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // BMI BAR
+                    Stack(
+                      alignment: Alignment.topLeft,
+                      children: [
+                        // pointer
+                        Positioned(
+                          left: barWidth * bmiPosition,
+                          child: Column(
                             children: [
-                              // BMI CIRCLE
-                              Column(
-                                children: [
-                                  SizedBox(
-                                    width: 100,
-                                    height: 100,
-                                    child: Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        CircularProgressIndicator(
-                                          value: (bmiValue / 40)
-                                              .clamp(0.0, 1.0)
-                                              .toDouble(),
-                                          strokeWidth: 9,
-                                          backgroundColor: Colors.grey.shade200,
-                                          valueColor: AlwaysStoppedAnimation(
-                                            _bmiColor(bmiValue),
-                                          ),
-                                        ),
-                                        Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              bmiValue.toStringAsFixed(1),
-                                              style: const TextStyle(
-                                                fontSize: 22,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            const Text(
-                                              "BMI",
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.black54,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _bmiColor(
-                                        bmiValue,
-                                      ).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.circle,
-                                          size: 8,
-                                          color: _bmiColor(bmiValue),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          status,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: _bmiColor(bmiValue),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                              const Icon(
+                                Icons.arrow_drop_down,
+                                size: 40,
+                                color: Colors.black87,
                               ),
-
-                              const SizedBox(width: 20),
-
-                              // CALORIES + QUICK INFO
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      "Recommended Calories",
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      "$calories kcal/day",
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        color: _accentColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: LinearProgressIndicator(
-                                        value: (calories / 3500)
-                                            .clamp(0.0, 1.0)
-                                            .toDouble(),
-                                        minHeight: 8,
-                                        backgroundColor: Colors.grey.shade200,
-                                        valueColor: AlwaysStoppedAnimation(
-                                          _accentColor,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      "Based on your weight, height, age, gender\nand activity level.",
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                  ],
+                              Text(
+                                bmiValue.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          // SMALL LEGEND FOR BMI
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _bmiLegendDot("Underweight", Colors.blue),
-                              _bmiLegendDot("Normal", Colors.green),
-                              _bmiLegendDot("Overweight", Colors.orange),
-                              _bmiLegendDot("Obese", Colors.red),
-                            ],
+                        ),
+
+                        // COLOR BAR
+                        Padding(
+                          padding: const EdgeInsets.only(top: 35),
+                          child: SizedBox(
+                            width: barWidth,
+                            height: 18,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 18,
+                                  child: Container(color: Colors.blue),
+                                ),
+                                Expanded(
+                                  flex: 25,
+                                  child: Container(color: Colors.green),
+                                ),
+                                Expanded(
+                                  flex: 30,
+                                  child: Container(color: Colors.orange),
+                                ),
+                                Expanded(
+                                  flex: 27,
+                                  child: Container(color: Colors.red),
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // -------- BMI LEGEND --------
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _bmiLegendDot("Underweight", Colors.blue),
+                        _bmiLegendDot("Normal", Colors.green),
+                        _bmiLegendDot("Overweight", Colors.orange),
+                        _bmiLegendDot("Obese", Colors.red),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // -------- CALORIES --------
+                    Text(
+                      "Recommended Calories",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
-              ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "$autoCalories kcal/day",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: _accentColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: LinearProgressIndicator(
+                        value: (autoCalories / 3500).clamp(0.0, 1.0),
+                        minHeight: 8,
+                        backgroundColor: Colors.grey.shade200,
+                        valueColor: AlwaysStoppedAnimation(_accentColor),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      "Based on your weight, height, age, gender\nand activity level.",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+            ]),
 
-              const SizedBox(height: 28),
+            const SizedBox(height: 20),
 
-              // SAVE BUTTON
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    if (userId == null) return;
+            // SAVE BUTTON
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (userId == null) return;
 
-                    final url = "${AppConfig.baseUrl}/api/user/update";
-                    final cleanBirthDate = birthDate.text.trim();
+                  final url = "${AppConfig.baseUrl}/api/user/update";
 
-                    final body = {
-                      "id": userId,
-                      "name": name.text,
-                      "email": email.text,
-                      "birthday": cleanBirthDate,
-                      "weight": weight.text,
-                      "height": height.text,
-                      "gender": gender,
-                      "activity": activity,
-                      "daily_calorie_target": calorieGoal,
-                    };
+                  final body = {
+                    "id": userId,
+                    "name": name.text,
+                    "email": email.text,
+                    "birthday": birthDate.text.trim(),
+                    "weight": weight.text,
+                    "height": height.text,
+                    "gender": gender,
+                    "activity": activity,
+                    "daily_calorie_target": calorieGoal,
+                  };
 
-                    final res = await http.post(
-                      Uri.parse(url),
-                      headers: {"Content-Type": "application/json"},
-                      body: jsonEncode(body),
+                  final res = await http.post(
+                    Uri.parse(url),
+                    headers: {"Content-Type": "application/json"},
+                    body: jsonEncode(body),
+                  );
+
+                  if (res.statusCode == 200) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Profile Updated")),
                     );
-
-                    if (res.statusCode == 200) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Profile Updated")),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Update failed")),
-                      );
-                    }
-                  },
-
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _accentColor,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 40,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Update failed")),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _accentColor,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 14,
                   ),
-                  child: const Text(
-                    "Save Profile",
-                    style: TextStyle(
-                      fontSize: 17,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
                   ),
                 ),
+                child: const Text(
+                  "Save",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
               ),
-
-              const SizedBox(height: 10),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // --- BEAUTIFUL INPUT BOX (UI ONLY) ---
-  Widget _inputBox(String label, TextEditingController controller) {
+  // -------------------- UI HELPERS --------------------------
+
+  Widget _sectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 6),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
+          color: Colors.black87,
+        ),
+      ),
+    );
+  }
+
+  Widget _infoCard(List<Widget> children) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
         ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children
+            .map(
+              (w) =>
+                  Padding(padding: const EdgeInsets.only(bottom: 10), child: w),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _smallInput(String label, TextEditingController controller) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F9FB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
       ),
       child: TextField(
         controller: controller,
         decoration: InputDecoration(
           labelText: label,
           border: InputBorder.none,
-          labelStyle: const TextStyle(fontSize: 13, color: Colors.black54),
+          labelStyle: const TextStyle(fontSize: 12),
         ),
         onChanged: (_) => setState(() {}),
       ),
     );
   }
 
-  Widget _datePickerBox(String label, TextEditingController controller) {
-    return GestureDetector(
-      onTap: () async {
-        // ---- FIX: safe local date parsing (no timezone magic) ----
-        DateTime initialDate;
-        final text = controller.text.trim();
-
-        if (text.isNotEmpty) {
-          try {
-            final parts = text.split('-'); // "yyyy-MM-dd"
-            initialDate = DateTime(
-              int.parse(parts[0]),
-              int.parse(parts[1]),
-              int.parse(parts[2]),
-            ); // local date, no shift
-          } catch (_) {
-            initialDate = DateTime(2000, 1, 1);
-          }
-        } else {
-          initialDate = DateTime(2000, 1, 1);
-        }
-
-        DateTime? selected = await showDatePicker(
-          context: context,
-          initialDate: initialDate,
-          firstDate: DateTime(1900),
-          lastDate: DateTime.now(),
-        );
-
-        if (selected != null) {
-          // Rebuild as pure date to avoid any timezone noise
-          final picked = DateTime(selected.year, selected.month, selected.day);
-          controller.text = DateFormat('yyyy-MM-dd').format(picked);
-          setState(() {});
-        }
-      },
-      child: AbsorbPointer(
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 6,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              labelText: label,
-              border: InputBorder.none,
-              labelStyle: const TextStyle(fontSize: 13, color: Colors.black54),
-              suffixIcon: const Icon(Icons.calendar_month, color: Colors.grey),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // --- DROPDOWN BOX (UI ONLY) ---
-  Widget _dropdownBox({
+  Widget _dropdownSmall({
     required String label,
     required String value,
     required List<String> items,
     required ValueChanged<String?> onChanged,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
-        ],
+        color: const Color(0xFFF7F9FB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
       ),
       child: DropdownButtonFormField<String>(
         decoration: InputDecoration(
           labelText: label,
           border: InputBorder.none,
-          labelStyle: const TextStyle(fontSize: 13, color: Colors.black54),
+          labelStyle: const TextStyle(fontSize: 12),
         ),
         initialValue: value,
         items: items
-            .map(
-              (e) => DropdownMenuItem<String>(
-                value: e,
-                child: Text(e, style: const TextStyle(fontSize: 14)),
-              ),
-            )
+            .map((e) => DropdownMenuItem(value: e, child: Text(e)))
             .toList(),
         onChanged: onChanged,
       ),
     );
   }
 
-  // --- BMI COLOR ---
   Color _bmiColor(double bmi) {
     if (bmi < 18.5) return Colors.blue;
     if (bmi < 25) return Colors.green;
@@ -722,19 +514,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Colors.red;
   }
 
-  // --- SMALL LEGEND DOT ---
   Widget _bmiLegendDot(String label, Color color) {
     return Row(
       children: [
         Container(
-          width: 8,
-          height: 8,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: Colors.black54),
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
         ),
       ],
     );

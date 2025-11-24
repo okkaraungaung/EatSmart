@@ -44,29 +44,37 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     double calc(double per100) => (per100 * grams) / 100;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7FAFA),
+      backgroundColor: const Color(0xFFF5F7F8),
       appBar: AppBar(
-        title: Text(food["label"] ?? "Food Details"),
         backgroundColor: Colors.white,
-        elevation: 1,
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          food["label"] ?? "Food Details",
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
       ),
 
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            //HEADER CARD
+            // HEADER SIMPLE CARD
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
@@ -76,38 +84,42 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                   Text(
                     food["label"] ?? "Unknown Food",
                     style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
 
                   const SizedBox(height: 20),
 
                   const Text(
-                    "Enter Amount (grams)",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    "Amount (grams)",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
                   ),
 
                   const SizedBox(height: 10),
 
-                  //Manual Input Box
+                  // Modern input field
                   Row(
                     children: [
-                      SizedBox(
-                        width: 90, // smaller box
+                      Expanded(
                         child: TextField(
                           controller: gramController,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
                             filled: true,
-                            fillColor: Colors.white,
-                            hintText: "100",
+                            fillColor: const Color(0xFFF3F5F7),
                             contentPadding: const EdgeInsets.symmetric(
-                              vertical: 5,
-                              horizontal: 10,
-                            ), // smaller height
+                              vertical: 14,
+                              horizontal: 16,
+                            ),
+                            hintText: "100",
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
                             ),
                           ),
                           onChanged: (v) {
@@ -119,50 +131,56 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      const Text(
-                        "g",
+                      /*const Text(
+                        "G",
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
-                      ),
+                      ),*/
                     ],
                   ),
 
                   const SizedBox(height: 10),
 
-                  //Slider
-                  Slider(
-                    min: 1,
-                    max: 500,
-                    value: grams,
-                    divisions: 500,
-                    label: "${grams.toInt()} g",
-                    onChanged: (v) {
-                      setState(() {
-                        grams = v;
-                        gramController.text = v.toInt().toString();
-                      });
-                    },
+                  // Modern slider
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: const Color(0xFFc8f0ef),
+                      inactiveTrackColor: Colors.grey.shade300,
+                      thumbColor: const Color(0xFFc8f0ef),
+                    ),
+                    child: Slider(
+                      min: 1,
+                      max: 500,
+                      value: grams,
+                      divisions: 500,
+                      onChanged: (v) {
+                        setState(() {
+                          grams = v;
+                          gramController.text = v.toInt().toString();
+                        });
+                      },
+                    ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // NUTRITION CARD
+            // NUTRITION SIMPLE CARD
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                color: const Color(0xFFFDF6BA),
-                borderRadius: BorderRadius.circular(22),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
+                    blurRadius: 6,
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
@@ -173,7 +191,9 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                     "Nutrition Summary",
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                   ),
+
                   const SizedBox(height: 16),
+
                   _nutrientRow(
                     "Calories",
                     "${calc(kcal100).toStringAsFixed(1)} kcal",
@@ -190,15 +210,17 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 30),
+
+            const SizedBox(height: 35),
 
             //ADD BUTTON
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
                   backgroundColor: const Color(0xFFc8f0ef),
+                  foregroundColor: const Color.fromARGB(255, 81, 80, 80),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
                   ),
@@ -214,7 +236,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                   widget.onAddIngredient != null
                       ? "Add Ingredient"
                       : "Add to Daily Calories",
-                  style: const TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 17),
                 ),
               ),
             ),
@@ -224,12 +246,11 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     );
   }
 
-  // 🌟 Add Ingredient → back to Recipe Builder
   void _addIngredientToRecipe() {
     final food = widget.food;
 
     final ingredient = {
-      "id": food["id"] ?? food["edamam_id"], // DB or Edamam
+      "id": food["id"] ?? food["edamam_id"],
       "label": food["label"],
       "grams": grams,
       "calories": calcNutrient("ENERC_KCAL"),
@@ -239,21 +260,17 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     };
 
     widget.onAddIngredient!(ingredient);
-
-    Navigator.pop(context); // back to search
-    Navigator.pop(context); // back to recipe builder
+    Navigator.pop(context);
+    Navigator.pop(context);
   }
 
-  // 🌟 Add to Daily Calorie → POST /api/meal/log
   Future<void> _addToDailyCalories() async {
     final food = widget.food;
 
-    String? foodId = food["id"]; // If DB result, will exist
+    String? foodId = food["id"];
 
-    // If foodId is null → this is Edamam food → need to save first
     if (foodId == null) {
       final saveUrl = "${AppConfig.baseUrl}/api/foods/save";
-
       final saveBody = {
         "edamam_id": food["edamam_id"] ?? food["foodId"],
         "name": food["label"],
@@ -274,25 +291,23 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         final saveData = jsonDecode(saveRes.body);
 
         if (saveRes.statusCode == 200 && saveData["id"] != null) {
-          foodId = saveData["id"]; // now stored in DB 🎉
+          foodId = saveData["id"];
         } else {
-          throw Exception("Failed to save food to DB");
+          throw Exception("Failed to save food");
         }
       } catch (e) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Error saving food: $e")));
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
         return;
       }
     }
 
-    // 🔹 Now log food because it has a DB id
     final today = DateTime.now();
     final date =
         "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
 
     final logUrl = "${AppConfig.baseUrl}/api/meal/log";
-
     final logBody = {
       "user_id": userId,
       "food_id": foodId,
@@ -308,23 +323,20 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
       );
 
       if (logRes.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Added ${grams.toInt()}g of ${food["label"]}!"),
-          ),
-        );
-        Navigator.pop(context); // pop FoodDetail
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Added successfully!")));
+        Navigator.pop(context);
       } else {
-        throw Exception("Failed: ${logRes.body}");
+        throw Exception(logRes.body);
       }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Error logging meal: $e")));
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
   }
 
-  // Small helper to compute nutrients
   double calcNutrient(String key) {
     final per100 = widget.food["nutrients"]?[key] ?? 0;
     return (per100 * grams) / 100;
@@ -332,14 +344,17 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
 
   Widget _nutrientRow(String title, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          Text(title, style: const TextStyle(fontSize: 16)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, color: Colors.black),
+          ),
           const Spacer(),
           Text(
             value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
         ],
       ),

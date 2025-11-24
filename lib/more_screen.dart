@@ -5,6 +5,7 @@ import 'support_screen.dart';
 import 'profile_screen.dart';
 import 'history_screen.dart';
 import 'login_screen.dart';
+import 'goals_setting_screen.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -80,6 +81,13 @@ class MoreScreen extends StatelessWidget {
                 MaterialPageRoute(
                   builder: (_) => const HistoryScreen(date: "today"),
                 ),
+              );
+            }),
+
+            _tile(Icons.flag_outlined, "Nutririon Goals", () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GoalSettingsScreen()),
               );
             }),
 

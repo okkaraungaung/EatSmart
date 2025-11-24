@@ -199,7 +199,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     Navigator.pop(context, recipe);
   }
 
-  // EDIT INGREDIENT (unchanged UI)
+  // EDIT INGREDIENT
   Future<void> _editIngredient(int index) async {
     final i = _ingredients[index];
 
@@ -363,7 +363,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(15),
               boxShadow: const [
                 BoxShadow(
                   color: Colors.black12,
@@ -386,7 +386,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   labelText: "Recipe Name",
                   labelStyle: const TextStyle(fontSize: 14),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(15),
                   ),
                 ),
               ),
