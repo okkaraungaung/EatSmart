@@ -114,12 +114,13 @@ class _HomeScreenState extends State<HomeScreen> {
       lookup[key] = item["calories"].toDouble();
     }
 
-    for (int i = 7; i > 0; i--) {
+    for (int i = 6; i >= 0; i--) {
       final day = now.subtract(Duration(days: i));
       final key = DateFormat("yyyy-MM-dd").format(day);
 
       result.add({"date": key, "calories": lookup[key] ?? 0});
     }
+    print(result);
 
     return result;
   }
@@ -403,7 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             value: calProgress,
                             color: const Color(0xFFF5B766),
                             amountText:
-                                "${todayCalories.toStringAsFixed(0)} / $carbGoal g",
+                                "${todayCarbs.toStringAsFixed(0)} / $carbGoal g",
                           ),
                         ],
                       ),
