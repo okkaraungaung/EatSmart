@@ -54,21 +54,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  // FETCH MEALS FROM BACKEND
+  //  FETCH FOODS FOR SELECTED DATE
   Future<void> _fetchFoodsForDate() async {
     setState(() => loading = true);
 
     final formatted = DateFormat("yyyy-MM-dd").format(selectedDate);
 
     final url =
-        "${AppConfig.baseUrl}/api/meal/by-date"
-        "?date=$formatted&user_id=${UserSession.userId}";
+        "${AppConfig.baseUrl}/api/meal/by-date?date=$formatted&user_id=${UserSession.userId}";
 
     try {
       final res = await http.get(Uri.parse(url));
+
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-
         setState(() {
           foods = data["foods"] ?? [];
           totalCalories = (data["totalCalories"] ?? 0).toDouble();
@@ -81,10 +80,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
     setState(() => loading = false);
   }
 
+  // ⭐ DELETE MEAL
+  Future<void> _deleteMeal(String mealId) async {
+    final url = "${AppConfig.baseUrl}/api/meal/delete?id=$mealId";
+
+    try {
+      final res = await http.delete(Uri.parse(url));
+
+      if (res.statusCode == 200) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Deleted successfully")));
+        _fetchFoodsForDate();
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Delete failed: ${res.body}")));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+
       appBar: AppBar(
         title: const Text(
           "Calories History",
@@ -99,7 +123,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // TOP CALENDAR BOX
+            // TOP CALENDAR CARD
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -114,13 +138,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                 ],
               ),
+
               child: Column(
                 children: [
-                  // Calendar Picker Button
+                  // Top Row (Today + Calendar Button)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Today's date on LEFT
                       Text(
                         DateFormat("MMMM dd, yyyy").format(DateTime.now()),
                         style: const TextStyle(
@@ -128,8 +152,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           color: Colors.black87,
                         ),
                       ),
-
-                      // Calendar button on RIGHT
                       GestureDetector(
                         onTap: _openDatePicker,
                         child: Container(
@@ -220,7 +242,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
             const SizedBox(height: 20),
 
-            // Date Title
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -234,7 +255,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
             const SizedBox(height: 12),
 
-            // FOODS LIST WITH COLORED BOXES
+            // ⭐ FOODS LIST WITH DELETE BUTTON
             Expanded(
               child: loading
                   ? const Center(child: CircularProgressIndicator())
@@ -242,6 +263,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       itemCount: foods.length,
                       itemBuilder: (context, index) {
                         final food = foods[index];
+                        print(food);
+
                         return Container(
                           decoration: BoxDecoration(
                             color: const Color(0xFFc8f0ef),
@@ -252,18 +275,35 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             horizontal: 16,
                             vertical: 14,
                           ),
+
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                food["name"].toString(),
-                                style: const TextStyle(fontSize: 16),
+                              // name
+                              Expanded(
+                                child: Text(
+                                  food["name"].toString(),
+                                  style: const TextStyle(fontSize: 16),
+                                ),
                               ),
+
+                              // calories
                               Text(
                                 "${food['calories']} kcal",
                                 style: const TextStyle(
                                   fontSize: 15,
                                   color: Colors.black54,
+                                ),
+                              ),
+
+                              const SizedBox(width: 12),
+
+                              // ⭐ DELETE BUTTON
+                              GestureDetector(
+                                onTap: () => _deleteMeal(food["id"].toString()),
+                                child: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                  size: 26,
                                 ),
                               ),
                             ],
