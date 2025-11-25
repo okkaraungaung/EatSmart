@@ -497,8 +497,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                         child: ListTile(
                           title: Text(item["label"]),
                           subtitle: Text(
-                            "${_d(item["grams"])} g • ${_d(item["calories"])} kcal",
+                            "${_d(item["grams"])} g • ${_d(item["calories"]).toInt()} kcal",
                           ),
+
                           onTap: () => _editIngredient(i),
                           trailing: IconButton(
                             icon: const Icon(Icons.delete_outline),
