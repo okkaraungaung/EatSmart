@@ -14,6 +14,9 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  // BMI bar width used everywhere (bar + pointer math)
+  static const double _bmiBarWidth = 350;
+
   final TextEditingController name = TextEditingController(text: "Okkar Aung");
   final TextEditingController email = TextEditingController(
     text: "okkar@example.com",
@@ -98,6 +101,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return "Obese";
   }
 
+  // ---------- Correct Pointer Position ----------
+  // Returns the X position (center) of the BMI value along the bar
+  double _bmiPointerPosition(double bmi) {
+    final double barWidth = _bmiBarWidth;
+
+    // Segment widths based on flex: 18 + 25 + 30 + 27 = 100
+    final double under = barWidth * 0.46; // 0 - 18.5
+    final double normal = barWidth * 0.16; // 18.5 - 25
+    final double over = barWidth * 0.12; // 25 - 30
+    final double obese = barWidth * 0.25; // 30 - 40
+
+    double x;
+
+    if (bmi <= 0) {
+      x = 0;
+    } else if (bmi < 18.5) {
+      // Map 0 - 18.5 -> 0 - under
+      x = (bmi / 18.5) * under;
+    } else if (bmi < 25) {
+      // Map 18.5 - 25 -> under - under+normal
+      x = under + ((bmi - 18.5) / (25 - 18.5)) * normal;
+    } else if (bmi < 30) {
+      // Map 25 - 30 -> under+normal - under+normal+over
+      x = under + normal + ((bmi - 25) / (30 - 25)) * over;
+    } else if (bmi < 40) {
+      // Map 30 - 40 -> under+normal+over - end
+      x = under + normal + over + ((bmi - 30) / (40 - 30)) * obese;
+    } else {
+      // Cap beyond 40 at the end of the bar
+      x = barWidth;
+    }
+
+    // Clamp to bar width
+    if (x < 0) x = 0;
+    if (x > barWidth) x = barWidth;
+
+    return x;
+  }
+
   // ---------- Calorie Goal ----------
   int get calorieGoal {
     double w = double.tryParse(weight.text) ?? 0;
@@ -147,9 +189,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final String status = bmiStatus;
     final int autoCalories = calorieGoal;
 
-    // BMI bar constants
-    const double barWidth = 280;
-    double bmiPosition = (bmiValue / 40).clamp(0.0, 1.0);
+    const double barWidth = _bmiBarWidth;
+    const double pointerSize = 22;
+
+    // pointerX is the LEFT of the icon, so we shift by half size to center
+    final double pointerX =
+        (_bmiPointerPosition(bmiValue) - pointerSize / 2).clamp(
+              0.0,
+              barWidth - pointerSize,
+            )
+            as double;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FA),
@@ -249,65 +298,74 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     const SizedBox(height: 16),
 
-                    // BMI BAR
-                    Stack(
-                      alignment: Alignment.topLeft,
-                      children: [
-                        // pointer
-                        Positioned(
-                          left: barWidth * bmiPosition,
-                          child: Column(
-                            children: [
-                              const Icon(
-                                Icons.arrow_drop_down,
-                                size: 40,
-                                color: Colors.black87,
+                    // -------- BMI BAR (with pointer inside) --------
+                    SizedBox(
+                      width: barWidth,
+                      height: 60, // enough space for bar + pointer + text
+                      child: Stack(
+                        children: [
+                          // COLOR BAR
+                          Positioned(
+                            top: 20,
+                            child: Container(
+                              width: barWidth,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              Text(
-                                bmiValue.toStringAsFixed(1),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 46,
+                                    child: Container(color: Colors.blue),
+                                  ),
+                                  Expanded(
+                                    flex: 16,
+                                    child: Container(color: Colors.green),
+                                  ),
+                                  Expanded(
+                                    flex: 12,
+                                    child: Container(color: Colors.orange),
+                                  ),
+                                  Expanded(
+                                    flex: 25,
+                                    child: Container(color: Colors.red),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
 
-                        // COLOR BAR
-                        Padding(
-                          padding: const EdgeInsets.only(top: 35),
-                          child: SizedBox(
-                            width: barWidth,
-                            height: 18,
-                            child: Row(
+                          // POINTER (triangle inside bar) + BMI value
+                          Positioned(
+                            left: pointerX,
+                            top: 10,
+                            child: Column(
                               children: [
-                                Expanded(
-                                  flex: 18,
-                                  child: Container(color: Colors.blue),
+                                // Triangle pointer (inside the bar)
+                                Icon(
+                                  Icons.arrow_drop_down,
+                                  size: pointerSize,
+                                  color: Colors.black,
                                 ),
-                                Expanded(
-                                  flex: 25,
-                                  child: Container(color: Colors.green),
-                                ),
-                                Expanded(
-                                  flex: 30,
-                                  child: Container(color: Colors.orange),
-                                ),
-                                Expanded(
-                                  flex: 27,
-                                  child: Container(color: Colors.red),
+                                const SizedBox(height: 2),
+                                Text(
+                                  bmiValue.toStringAsFixed(1),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
-                    // -------- BMI LEGEND --------
+                    // LEGEND
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -320,7 +378,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // -------- CALORIES --------
+                    // CALORIES
                     Text(
                       "Recommended Calories",
                       style: TextStyle(
