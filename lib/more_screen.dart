@@ -6,12 +6,14 @@ import 'profile_screen.dart';
 import 'history_screen.dart';
 import 'login_screen.dart';
 import 'goals_setting_screen.dart';
+import 'package:eat_smart/user_session.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    print("User Name: ${UserSession.name}, Email: ${UserSession.email}");
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFA),
 
@@ -47,9 +49,9 @@ class MoreScreen extends StatelessWidget {
 
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
-                          "Okkar Aung",
+                          UserSession.name ?? "Unknown User",
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -57,7 +59,7 @@ class MoreScreen extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          "okkar@example.com",
+                          UserSession.email ?? "No email",
                           style: TextStyle(fontSize: 14, color: Colors.black54),
                         ),
                       ],

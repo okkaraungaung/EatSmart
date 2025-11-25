@@ -48,6 +48,8 @@ class _LoginScreenState extends State<LoginScreen> {
       // save user_id locally
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString("user_id", userId);
+      await prefs.setString("name", user["name"]);
+      await prefs.setString("email", user["email"]);
 
       Navigator.pushAndRemoveUntil(
         context,
