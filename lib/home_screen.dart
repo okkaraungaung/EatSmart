@@ -37,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     dailyGoal = prefs.getInt("dailyGoal") ?? 2000;
     proteinGoal = prefs.getInt("proteinGoal") ?? 150;
     fatGoal = prefs.getInt("fatGoal") ?? 60;
-    carbGoal = prefs.getInt("carbgoal") ?? 60;
+    carbGoal = prefs.getInt("carbGoal") ?? 60;
   }
 
   int _selectedIndex = 0;
@@ -120,7 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       result.add({"date": key, "calories": lookup[key] ?? 0});
     }
-    print(result);
 
     return result;
   }
@@ -401,8 +400,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           _nutrientBar(
                             icon: Icons.rice_bowl,
                             label: "Carbs",
-                            value: calProgress,
-                            color: const Color(0xFFF5B766),
+                            value: todayCarbs / carbGoal,
+                            color: Colors.teal,
                             amountText:
                                 "${todayCarbs.toStringAsFixed(0)} / $carbGoal g",
                           ),
