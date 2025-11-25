@@ -13,7 +13,6 @@ class MoreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print("User Name: ${UserSession.name}, Email: ${UserSession.email}");
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFA),
 
@@ -80,9 +79,7 @@ class MoreScreen extends StatelessWidget {
             _tile(Icons.history, "History", () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const HistoryScreen(date: "today"),
-                ),
+                MaterialPageRoute(builder: (_) => const HistoryScreen()),
               );
             }),
 

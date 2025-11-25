@@ -6,27 +6,30 @@ import 'dart:convert';
 import '../config.dart';
 
 class HistoryScreen extends StatefulWidget {
-  final String date;
-
-  const HistoryScreen({super.key, required this.date});
+  const HistoryScreen({super.key});
 
   @override
-  State<HistoryScreen> createState() => _HistoryScreenState();
+  State<HistoryScreen> createState() => HistoryScreenState();
 }
 
-class _HistoryScreenState extends State<HistoryScreen> {
+class HistoryScreenState extends State<HistoryScreen> {
   late DateTime selectedDate;
   late List<DateTime> weekDays;
 
   bool loading = false;
   List foods = [];
   double totalCalories = 0;
+  bool _firstLoad = true;
 
   @override
   void initState() {
     super.initState();
     selectedDate = DateTime.now();
     weekDays = _generateWeek(selectedDate);
+    _fetchFoodsForDate();
+  }
+
+  void refresh() {
     _fetchFoodsForDate();
   }
 
@@ -101,6 +104,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    print("HistoryScreen didChangeDependencies");
+    super.didChangeDependencies();
+    if (_firstLoad) {
+      _firstLoad = false;
+    } else {
+      _fetchFoodsForDate(); // refresh when returning to screen
     }
   }
 
@@ -263,7 +277,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       itemCount: foods.length,
                       itemBuilder: (context, index) {
                         final food = foods[index];
-                        print(food);
 
                         return Container(
                           decoration: BoxDecoration(

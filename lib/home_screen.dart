@@ -19,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final GlobalKey<HistoryScreenState> historyScreenKey =
+      GlobalKey<HistoryScreenState>();
   final String? userId = UserSession.userId;
 
   double todayCalories = 0;
@@ -128,6 +130,9 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _selectedIndex = index);
 
     if (index == 0) loadData();
+    if (index == 1) {
+      historyScreenKey.currentState?.refresh();
+    }
   }
 
   @override
@@ -169,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _selectedIndex,
         children: [
           _buildHomeContent(),
-          const HistoryScreen(date: '2025-11-06'),
+          HistoryScreen(key: historyScreenKey),
           const RecipeScreen(),
           const MoreScreen(),
         ],
